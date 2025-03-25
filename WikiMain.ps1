@@ -45,7 +45,12 @@ $userParameters.BuildTags = $slp
 #      "HTTP_preFix"    : "https",                 - THIS IS THE SECURITY TO USE IN THE API CALL . DO NOT CHANGE
 #      "OutPutToFile"   : "No",                    - THIS IS IF YOU WANT LOGS GENERATED TO AUDIT WHAT GETS CREATED
 #
-$BuildData = Get-ReleaseNotesByBuildByTag  -userParams $userParameters 
+
+#set query to use to find workitems
+$userParameters.CurrentWitemQry = "BPM capacity America & India - exec Ask"
+Get-WorkItemParentsByQyery -userParams $userParameters -outfile "C:\TempData\BPM_Capacity2-27-25.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
+
+#$BuildData = Get-ReleaseNotesByBuildByTag  -userParams $userParameters 
 
 
 # create wiki page 
@@ -71,4 +76,4 @@ $BuildData = Get-ReleaseNotesByBuildByTag  -userParams $userParameters
 #      "HTTP_preFix"    : "https",                 - THIS IS THE SECURITY TO USE IN THE API CALL . DO NOT CHANGE
 #      "OutPutToFile"   : "No",                    - THIS IS IF YOU WANT LOGS GENERATED TO AUDIT WHAT GETS CREATED
 #
-Set-ReleaseNotesToWiKi  -userParams $userParameters -Data $BuildData
+# Set-ReleaseNotesToWiKi  -userParams $userParameters -Data $BuildData

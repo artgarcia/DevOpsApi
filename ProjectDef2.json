@@ -1,7 +1,7 @@
 { 
     "VSTSMasterAcct" : "Org Name goes here",
     "userEmail"      : "user email address assocaited with pat key",
-    "PAT"            : "pay key goes here",
+    "PAT"            : "PAT key goes here",
     "ProjectName"    : "Project name goes here",
     "DefaultTeam"    : "",   
     

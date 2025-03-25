@@ -928,6 +928,163 @@ function WriteToWikiPage()
 
 }
 
+function Get-WorkItemParentsByQyery()
+{
+    Param(
+        [Parameter(Mandatory = $true)]
+        $userParams,
+        [Parameter(Mandatory = $true)]
+        $outFile,
+        [Parameter(Mandatory = $true)]
+        $PhraseOne,
+        [Parameter(Mandatory = $true)]
+        $PhraseTwo              
+    )
+
+    $authorization = GetVSTSCredential -Token $userParams.PAT -userEmail $userParams.userEmail       
+
+     # first get project because we need project id
+    # https://docs.microsoft.com/en-us/rest/api/azure/devops/core/projects/list?view=azure-devops-rest-7.1
+    # GET https://dev.azure.com/{organization}/_apis/projects?api-version=7.1-preview.4
+    $AllProjectsUrl = $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct + "/_apis/projects?api-version=7.1-preview.4"     
+    $AllProjects = Invoke-RestMethod -Uri $AllProjectsUrl -Method Get -Headers $authorization
+    $project = $AllProjects.value | Where-Object {$_.name -eq $userParams.ProjectName}
+    Write-Host $project
+
+    # get query list and find specific query for current release
+    # https://docs.microsoft.com/en-us/rest/api/azure/devops/wit/queries/list?view=azure-devops-rest-7.1
+    # GET https://dev.azure.com/{organization}/{project}/_apis/wit/queries?api-version=7.1-preview.2
+    $queryUrl = $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +"/" +  $project.Id +"/_apis/wit/queries?" + '$expand=all&$depth=1&api-version=7.1-preview.2'
+    $query = Invoke-RestMethod -Uri $queryUrl -Method Get -Headers $authorization -ContentType "application/json" 
+    
+    $sharedQry =  $query.value | Where-Object {$_.name -eq "My Queries"}
+    $currRelQuery =  $sharedQry.children | Where-Object {$_.name -eq $userParams.CurrentWitemQry } 
+        
+    $tmData = @{
+        query = $currRelQuery.wiql
+    }
+    $qryText = ConvertTo-Json -InputObject $tmData  
+
+    # get current query items
+    $queryUrl = $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +"/" +  $project.Id +"/" + $userParams.DefaultTeam +"/_apis/wit/wiql?api-version=7.1-preview.2"     
+    $currquery = Invoke-RestMethod -Uri $queryUrl -Method Post -Headers $authorization -Body $qryText -ContentType "application/json" 
+
+    # setup array to house results
+    $AllWorkItems = @()
+    foreach ($wk in $currquery.workItems) 
+    {
+        # get work item
+        $WorItemUrl =  $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_apis/wit/workitems/"+ $wk.Id + "?" + '$expand=all&api-version=7.1-preview.3'
+        $WorkItem = Invoke-RestMethod -Uri $WorItemUrl -Method Get -Headers $authorization
+
+        # get parent work item
+        foreach ($currentItem in $WorkItem.relations) 
+        {
+            if( $currentItem.rel -eq "System.LinkTypes.Hierarchy-Reverse")
+            {
+                $parentUrl = $currentItem.url
+                $parent = Invoke-RestMethod -Uri $parentUrl -Method Get -Headers $authorization
+            }
+        }
+
+        $parentId = $parent.id
+        $parentName = $parent.fields.'System.Title'
+        $title = $WorkItem.fields.'System.Title'
+        $desc = $WorkItem.fields.'System.Description'
+        $state = $WorkItem.fields.'System.State'   
+        $BPM = $WorkItem.fields.'Custom.PMOPM'.displayName   
+
+        if ( $WorkItem.fields.'Custom.LedByTeam' -eq $null)
+        {
+            $ledByTeam =""
+        }
+        else {
+            $ledByTeam = $WorkItem.fields.'Custom.LedByTeam'
+        }
+        $adoLink = "=HYPERLINK(" + $([char]34) + $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_workitems/edit/" + $wk.Id + $([char]34) + "," + $wk.Id + ") " 
+
+        $copilotGit = $false
+
+        if( $desc.ToLower().Contains($PhraseOne))
+        {
+            $copilotGit = $true
+        }
+        if( $desc.ToLower().Contains($PhraseTwo))
+        {
+            $copilotGit = $true
+        }
+        if( $title.ToLower().Contains($PhraseOne))
+        {
+            $copilotGit = $true
+        }
+        if( $title.ToLower().Contains($PhraseTwo))
+        {
+            $copilotGit = $true
+        }
+
+        $title = $title.Replace("|"," - ")
+        
+        $execAsk = $WorkItem.fields.'Custom.ExecutiveAsk'
+        $execAsking = $WorkItem.fields.'Custom.ExecutiveAskingList'
+
+        Write-Host  $title
+        Write-Host  $parentName
+        write-Host  $ledByTeam
+
+        $stg = New-Object -TypeName PSObject -Property @{
+            Id = $wk.Id
+            EngagementType = $WorkItem.fields.'System.WorkItemType'
+            ADOLink = $adoLink
+            Title = $title 
+            ParentId = $parentId
+            ParentName = $parentName
+            Desc = $desc
+            State = $state
+            LedByTeam = $ledByTeam
+            BPM = $BPM
+            CopilotGit = $copilotGit
+            ExecAsk = $execAsk
+            ExecAsking = $execAsking
+
+        }
+
+        $AllWorkItems += $stg   
+        $stg = $null   
+      
+    }
+
+
+    Write-Host " ==========================   Done ======================== "
+
+    Write-Output "  " | Out-File -FilePath $outFile
+    Write-Output "ID|EngagementType|ADOLink|ParentName|Title|State|LedByTeam|BPM|CoPilotGit|ExecAsk|ExecAsking" | Out-File -FilePath $outFile -Append
+    
+    foreach ($Item in $AllWorkItems) 
+    {
+        Write-Output $item.Id "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.EngagementType "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.ADOLink "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.ParentName "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.Title "|" | Out-File -FilePath $outFile -Append  -NoNewline
+
+        #Write-Output $item.Desc "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.State "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.LedByTeam "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.BPM "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.CoPilotGit "|" | Out-File -FilePath $outFile -Append -NoNewline
+        Write-Output $item.ExecAsk "|" | Out-File -FilePath $outFile -Append -NoNewline
+        Write-Output $item.ExecAsking | Out-File -FilePath $outFile -Append -NoNewline
+        Write-Output "" | Out-File -FilePath $outFile -Append
+        
+        
+    }
+    
+
+    Write-Host " ========================== write complete ======================== "
+
+
+}
+
 
 function Set-ReleaseNotesToWiKi()
 {
