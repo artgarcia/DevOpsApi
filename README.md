@@ -61,6 +61,10 @@ The scripts contain the following modules:
 </br>
 3 - CreatMain.ps1 - This will generate a project,team and add users to a team. It will also create environments and default builds.
                     You can also create , List and delete branches in the Git Repos
+                    There is also a function that allows you to copy processes and workItem Types within the process. You select the Process and WorkItem to copy from
+                    and then the process and workItem to copy to.
+
+                    Some other functions deal with getting repo information, copying deleting, etc. They are currently commented out, but feel free to use as needed.
                    
 </br>
 </br>
@@ -100,5 +104,61 @@ Execution process
           
            
 </br>
+</br>
+5 - WorkItemCreatMain.ps1 - This will allow you to save a workitem type to a json file, copy a workitem type from one process to another and lastly
+    create a workitem type from a json file.
+
+      # this will find an existing workitem type in a given process and copy it to json file. this
+      # will allow you to save the process and subject it to version control
+      # INPUTS:
+      #          userParams - Projectdef.json file with parameters used by the script.
+      #          InheritedProcessName     - The process to copy work item type into
+      #          WorkItemToSave           - Name to give the WorkItem in the targetPorcess
+      #          OutputFile               - Name of the file where the process was saved to. include path
+      # OUTPUT:
+      #         This function will generate 3 files.
+      #               1 - path \ OutputFile.json         - this is the work item detail including pages and controls
+      #               2 - path \ OutputFile-RULE.json    - This is the rules if any were created
+      #               3 - path \ OutputFile-STATES.json  - This is the states in the work item
+      #
+      SaveWorkItemtoFile -userParams $userParameters -InheritedProcessName "xxxxxxxxx" -WorkItemToSave "xxxxxxx" -OutputFile ($userParameters.DirRoot + "\\" + "xxxxxx.json")
+
+      #
+      # this code will read a workitemtype from a json file and create it in another process.
+      # INPUTS:
+      #          userParams - Projectdef.json file with parameters used by the script.
+      #          TargetProcessName        - The process to copy work item type into
+      #          TargetWorkItemToCreate   - Name to give the WorkItem in the targetPorcess
+      #          WorkItemInputFile        - Name of the file where the process was saved to. include path
+      #
+      CreateWorkItemFromFile -userParams $userParameters -TargetProcessName "xxxxxxx" -TargetWorkItemToCreate "xxxxxxxxx"  -WorkItemInputFile ($userParameters.DirRoot + "\\" + "xxxxxxxxx.json")
+
+      #
+      # INPUTS:
+      #          userParams - Projectdef.json file with parameters used by the script.
+      #          InheritedProcessName - The process to copy work item type from
+      #          DestinationProcess   - Name of the process to copy the new work item type to
+      #          WorkItemCopyFrom     - Name of the work item type to copy from
+      #          WorkItemToCopy       - Name of work item type to copy to
+      #
+       Copy-ProcessAndWorkItemType -userParams $userParameters -InheritedProcessName "xxxxxxxxx" -DestinationProcess "xxxxxxx" -WorkItemCopyFrom "xxxxxxxxx" -WorkItemToCopy "xxxxxxxx" -OutputFile ($userParameters.DirRoot + "\\" + "xxxxxxx.json")
+
+
+      
+
+
+</br>
+</br>
+------------------------------------------------------------------------------------------------------------------------------------------------------
+</br>
+</br>
+Copyright © 2023 Arthur A Garcia
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE
+
 </br>
 
