@@ -48,7 +48,7 @@ $userParameters.BuildTags = $slp
 
 #set query to use to find workitems
 $userParameters.CurrentWitemQry = "BPM capacity America & India - exec Ask"
-Get-WorkItemParentsByQyery -userParams $userParameters -outfile "C:\TempData\BPM_Capacity2-27-25.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
+Get-WorkItemParentsByQyery -userParams $userParameters -outfile "C:\TempData\BPM_Capacity.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
 
 #$BuildData = Get-ReleaseNotesByBuildByTag  -userParams $userParameters 
 

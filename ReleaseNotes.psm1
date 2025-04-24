@@ -1273,6 +1273,7 @@ function Get-WorkItemParentsByQyery()
 
     Write-Output "  " | Out-File -FilePath $outFile
     Write-Output "ID|EngagementType|ADOLink|ParentName|Title|State|LedByTeam|BPM|CoPilotGit|ExecAsk|ExecAsking" | Out-File -FilePath $outFile -Append
+    Write-Output $today.Date "||||||||||" | Out-File -FilePath $outFile -Append
     
     foreach ($Item in $AllWorkItems) 
     {
