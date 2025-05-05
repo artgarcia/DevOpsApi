@@ -1142,6 +1142,103 @@ function WriteToWikiPage()
   
 
 }
+function FindPhraseInWorkItemComments()
+{
+    Param(
+        [Parameter(Mandatory = $true)]
+        $userParams,
+        [Parameter(Mandatory = $true)]
+        $outFile,
+        [Parameter(Mandatory = $true)]
+        $QueryName,
+        [Parameter(Mandatory = $true)]
+        $CommentSearchPhrase,
+        [Parameter(Mandatory = $true)]
+        $includeAllComments 
+    )
+
+
+    $authorization = GetVSTSCredential -Token $userParams.PAT -userEmail $userParams.userEmail       
+
+    # first get project because we need project id
+    # https://docs.microsoft.com/en-us/rest/api/azure/devops/core/projects/list?view=azure-devops-rest-7.1
+    # GET https://dev.azure.com/{organization}/_apis/projects?api-version=7.1-preview.4
+    $AllProjectsUrl = $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct + "/_apis/projects?api-version=7.1-preview.4"     
+    $AllProjects = Invoke-RestMethod -Uri $AllProjectsUrl -Method Get -Headers $authorization
+    $project = $AllProjects.value | Where-Object {$_.name -eq $userParams.ProjectName}
+    Write-Host $project
+
+    # get query list and find specific query for current release
+    # https://docs.microsoft.com/en-us/rest/api/azure/devops/wit/queries/list?view=azure-devops-rest-7.1
+    # GET https://dev.azure.com/{organization}/{project}/_apis/wit/queries?api-version=7.1-preview.2
+    $queryUrl = $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +"/" +  $project.Id +"/_apis/wit/queries?" + '$expand=all&$depth=1&api-version=7.1-preview.2'
+    $query = Invoke-RestMethod -Uri $queryUrl -Method Get -Headers $authorization -ContentType "application/json" 
+    
+    $sharedQry =  $query.value | Where-Object {$_.name -eq "My Queries"}
+    $currRelQuery =  $sharedQry.children | Where-Object {$_.name -eq $QueryName } 
+        
+    $tmData = @{
+        query = $currRelQuery.wiql
+    }
+    $qryText = ConvertTo-Json -InputObject $tmData  
+
+    # get current query items
+    $queryUrl = $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +"/" +  $project.Id +"/" + $userParams.DefaultTeam +"/_apis/wit/wiql?api-version=7.1-preview.2"     
+    $currquery = Invoke-RestMethod -Uri $queryUrl -Method Post -Headers $authorization -Body $qryText -ContentType "application/json" 
+
+    
+    Write-Output "  " | Out-File -FilePath $outFile
+    Write-Output " " | Out-File -FilePath $outFile -Append
+    
+    foreach ($wk in $currquery.workItems) 
+    {
+        # get work item
+        $WorItemUrl =  $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_apis/wit/workitems/"+ $wk.Id + "?" + '$expand=all&api-version=7.1-preview.3'
+        $WorkItem = Invoke-RestMethod -Uri $WorItemUrl -Method Get -Headers $authorization
+
+        # get comments for this work item
+        $WorIteCommentmUrl =  $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_apis/wit/workitems/"+ $wk.Id + '/comments?api-version=7.2-preview.4'
+        $WorkItemComment = Invoke-RestMethod -Uri $WorIteCommentmUrl -Method Get -Headers $authorization
+
+        foreach ($item in $WorkItemComment.comments)
+        {
+            Write-Host $WorkItem.fields.'System.Title' 
+            $comment = $item.text
+           
+            # Remove HTML tags using Regex 
+            $comment = [System.Text.RegularExpressions.Regex]::Replace($comment, "<.*?>", "")
+            $comment = [System.Text.RegularExpressions.Regex]::Replace($comment, "&nbsp;", " ")
+
+
+            if( $comment.ToLower().Contains($CommentSearchPhrase.ToLower()))            
+            {
+               
+                Write-Host "   WorkItem ID:" $wk.Id " Title : " $WorkItem.fields.'System.Title'   " Version : "  $item.version.ToString()  "  Date Modified :" $item.modifiedDate " Comment Found : "  $comment
+                Write-Host ""
+
+                Write-Output "   WorkItem ID:" $wk.Id " Title : " $WorkItem.fields.'System.Title'  " Version : "  $item.version.ToString() "  Date Modified :" $item.modifiedDate | Out-File -FilePath $outFile -Append -NoNewline
+                
+                # add comments to output file
+                if($includeAllComments -eq $true)
+                {
+                    Write-Output "  Comment Found : " | Out-File -FilePath $outFile -Append 
+                    Write-Output  $comment | Out-File -FilePath $outFile -Append 
+                }
+                Write-Output  " " | Out-File -FilePath $outFile -Append
+            }   
+            else {
+                Write-Host "   WorkItem ID:" $wk.Id " Title : " $WorkItem.fields.'System.Title'  " Version : "  $item.version.ToString() "  Date Modified :" $item.modifiedDate " Comment Not Found : "  
+                Write-Host ""
+            }
+            
+        }
+       
+    }
+}
+        
+        
+
+
 
 function Get-WorkItemParentsByQyery()
 {
