@@ -1154,7 +1154,7 @@ function FindPhraseInWorkItemComments()
         [Parameter(Mandatory = $true)]
         $CommentSearchPhrase,
         [Parameter(Mandatory = $true)]
-        $includeAllComments 
+        $includeAllComments
     )
 
 
@@ -1190,6 +1190,7 @@ function FindPhraseInWorkItemComments()
     Write-Output "  " | Out-File -FilePath $outFile
     Write-Output " " | Out-File -FilePath $outFile -Append
     
+    $WorkItemsFound = @()
     foreach ($wk in $currquery.workItems) 
     {
         # get work item
@@ -1218,6 +1219,24 @@ function FindPhraseInWorkItemComments()
 
                 Write-Output "   WorkItem ID:" $wk.Id " Title : " $WorkItem.fields.'System.Title'  " Version : "  $item.version.ToString() "  Date Modified :" $item.modifiedDate | Out-File -FilePath $outFile -Append -NoNewline
                 
+                $stg = New-Object -TypeName PSObject -Property @{
+                    Id = $wk.Id
+                    Title = $WorkItem.fields.'System.Title'                    
+                }
+        
+                # Example: Find duplicate IDs in $WorkItemsFound
+                $duplicates = $WorkItemsFound | Where-Object { $_.Id -eq $wk.Id}
+
+                # Output the duplicate IDs
+                if ($duplicates) {
+                    Write-Host "Duplicate IDs found:"
+                    foreach ($dup in $duplicates) {
+                        Write-Host "ID:" $dup.Name "Count:" $dup.Count
+                    }
+                } else {
+                    $WorkItemsFound += $stg   
+                    $stg = $null    
+                }
                 # add comments to output file
                 if($includeAllComments -eq $true)
                 {
@@ -1227,13 +1246,43 @@ function FindPhraseInWorkItemComments()
                 Write-Output  " " | Out-File -FilePath $outFile -Append
             }   
             else {
-                Write-Host "   WorkItem ID:" $wk.Id " Title : " $WorkItem.fields.'System.Title'  " Version : "  $item.version.ToString() "  Date Modified :" $item.modifiedDate " Comment Not Found : "  
+                Write-Host "   WorkItem ID:" $wk.Id " Title : " $WorkItem.fields.'System.Title'  " Version : "  $item.version.ToString()  " Comment Not Found : "  
                 Write-Host ""
             }
             
-        }
-       
+        }       
     }
+    
+    $found = "("
+    foreach ( $item in $WorkItemsFound )
+    {
+        $found += $item.Id.ToString() + ", "
+    }
+    $found = " [System.Id] IN " + $found.TrimEnd(", ") + ")"
+
+
+    # Define the WIQL for the query
+    $folderPath = "Shared Queries"      # Folder where the query will be created
+
+    #$queryName = "Impact Query Studio 3"   
+    $queryName = "Impact_test"   
+
+    $wiql = @{
+        name = $queryName
+        wiql = "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE " + $found         
+        isFolder = $false
+    }
+   
+    $wiqlJson = $wiql | ConvertTo-Json -Depth 10
+
+     # get work item
+     $WorItemUrl =  $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_apis/wit/queries/" + $folderPath + "/" + $queryName + "?api-version=7.2-preview.2"
+     $WorkItem = Invoke-RestMethod -Uri $WorItemUrl -Method Patch -Headers $authorization -Body $wiqlJson -ContentType "application/json" -Verbose
+
+
+     # Output the response
+     Write-Host "Query created successfully!" -ForegroundColor Green
+     Write-Host "Query URL: $($WorkItem.url)"
 }
         
         

@@ -48,7 +48,7 @@ $userParameters.BuildTags = $slp
 
 
 # find phrase in comments
-$userParameters.CurrentWitemQry = "BPM Studio 3"
+$userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
 FindPhraseInWorkItemComments -UserParams $userParameters -CommentSearchPhrase "Impact:" -includeAllComments $true -QueryName $userParameters.CurrentWitemQry  -outfile "C:\TempData\CommentList.txt"
 
 #set query to use to find workitems
