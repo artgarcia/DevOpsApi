@@ -46,39 +46,32 @@ $userParameters.BuildTags = $slp
 #      "OutPutToFile"   : "No",                    - THIS IS IF YOU WANT LOGS GENERATED TO AUDIT WHAT GETS CREATED
 #
 
+$action = "FindPhrase"
 
-# find phrase in comments
-$userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
-FindPhraseInWorkItemComments -UserParams $userParameters -CommentSearchPhrase "Impact:" -includeAllComments $true -QueryName $userParameters.CurrentWitemQry  -outfile "C:\TempData\CommentList.txt"
-
-#set query to use to find workitems
-$userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
-Get-WorkItemParentsByQyery -userParams $userParameters -outfile "C:\TempData\BPM_Capacity.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
-
-#$BuildData = Get-ReleaseNotesByBuildByTag  -userParams $userParameters 
-
-
-# create wiki page 
-# This method will create a wiki page of the release notes found. It will create a page using the
-# PublishSub value + the BuildTags value. it will put the page under  the PublishParent page and sub page called PublishSub. the Release
-# notes will reside in that page.
-#
-#      "VSTSMasterAcct" : "fdx-strat-pgm",
-#      "userEmail"      : "your email address",
-#      "PAT"            : "this is where you add your Personal access token (PAT) ",       
-#      "ProjectName"    : "fdx-surround",      - THIS IS THE NAME OF THE PROJECT YOU WANT TO REPORT ON
-#      "BuildTags"      : "Release:1.1.0",     - THIS IS THE RELEASE YOU WANT TO REPORT ON. NOTE IT MUST BE IN THE FORMAT SHOWN
-#                                                    :Release:x.x.x 
-#      "PublishWiKi"    : "lumina.wiki",           - THIS IS THE NAME OF THE WIKI TO PUBLISH TO 
-#      "PublishParent"  : "Release Notes",         - THIS IS THE PARENT PAGE THE PAGE WILL BE PLACED UNDER
-#      "PublishPagePrfx": "System Release ",       - THIS IS THE NAME YOU WANT FOR THE PAGE. NAME WIIL BE PROJECT NAME + THIS TAG 
-#                                                        + THE RELEASE NUMBER IE : fdx-surround - System Release - Release:1.1.0
-#      "PublishBldNote" : "Build section Notes",   - THIS IS ANY NOTES YOU WANT TO ADD TO THE BUILD SECTION
-#      "PublishWKItNote": "Work Item section note",- THIS IS ANY NOTES YOU WANT IN THE WORK ITEM SECTION
-#      "PublishTestNote": "Testing Notes",         - THIS IS ANY NOTES YOU WANT IN THE TESTING SECTION
-#      "WorkItemTypes"  : ["User Story","Bug"],    - THESE ARE THE WORK ITEM TYPES TO REPORT ON . DO NOT CHANGE
-#      "BuildResults"   : ["Succeeded"],           - THIS IS THE BUILD STATUS TO REPORT ON. DO NOT CHANGE
-#      "HTTP_preFix"    : "https",                 - THIS IS THE SECURITY TO USE IN THE API CALL . DO NOT CHANGE
-#      "OutPutToFile"   : "No",                    - THIS IS IF YOU WANT LOGS GENERATED TO AUDIT WHAT GETS CREATED
-#
-# Set-ReleaseNotesToWiKi  -userParams $userParameters -Data $BuildData
+switch ($action) 
+{
+    "FindPhrase" 
+    { 
+        # find phrase in comments
+        $userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
+        FindPhraseInWorkItemComments -UserParams $userParameters -CommentSearchPhrase "Impact:" -includeAllComments $true -QueryName $userParameters.CurrentWitemQry  -outfile "C:\TempData\CommentList.txt"
+    }
+    "GetBMPUsage" 
+    {  
+        #set query to use to find workitems
+        $userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
+        Get-WorkItemParentsByQyery -userParams $userParameters -outfile "C:\TempData\BPM_Capacity.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
+    }
+    "GetReleaseNotesToWiki" {
+        # get release notes for each build in the list
+        Set-ReleaseNotesToWiKi  -userParams $userParameters -Data $BuildData
+    }
+    "GetReleaseNotesdByTag" {
+        # get release notes for each build in the list
+        $BuildData = Get-ReleaseNotesByBuildByTag  -userParams $userParameters 
+    }
+          
+   Default {
+        Write-Host "No valid action specified."
+    }
+}
