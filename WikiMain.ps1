@@ -46,7 +46,7 @@ $userParameters.BuildTags = $slp
 #      "OutPutToFile"   : "No",                    - THIS IS IF YOU WANT LOGS GENERATED TO AUDIT WHAT GETS CREATED
 #
 
-$action = "FindPhrase"
+$action = "GetActivityUsage"
 
 switch ($action) 
 {
@@ -61,6 +61,12 @@ switch ($action)
         #set query to use to find workitems
         $userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
         Get-WorkItemParentsByQyery -userParams $userParameters -outfile "C:\TempData\BPM_Capacity.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
+    }
+    "GetActivityUsage" 
+    {
+        # get release notes for each build in the list
+        $userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
+        Get-WorkItemActivityByQuery -userParams $userParameters -outfile "C:\TempData\BPM_CapacityFY26.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
     }
     "GetReleaseNotesToWiki" {
         # get release notes for each build in the list
