@@ -1318,7 +1318,7 @@ Function Get-WorkItemActivityByQuery()
     $queryUrl = $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +"/" +  $project.Id +"/_apis/wit/queries?" + '$expand=all&$depth=1&api-version=7.1-preview.2'
     $query = Invoke-RestMethod -Uri $queryUrl -Method Get -Headers $authorization -ContentType "application/json" 
     
-    $sharedQry =  $query.value | Where-Object {$_.name -eq "My Queries"}
+    $sharedQry =  $query.value | Where-Object {$_.name -eq "Shared Queries"}
     $currRelQuery =  $sharedQry.children | Where-Object {$_.name -eq $userParams.CurrentWitemQry } 
         
     $tmData = @{
@@ -1331,223 +1331,209 @@ Function Get-WorkItemActivityByQuery()
     $currquery = Invoke-RestMethod -Uri $queryUrl -Method Post -Headers $authorization -Body $qryText -ContentType "application/json" 
 
     # setup array to house results
-    $AllWorkItems = @()
-    foreach ($wk in $currquery.workItemRelations)
+   $AllWorkItems = @()
+    foreach ($wk in $currquery.workItems)
     {
         # get work item
-        $WorItemUrl =  $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_apis/wit/workitems/"+ $wk.target.id + "?" + '$expand=all&api-version=7.1-preview.3'
+        $WorItemUrl =  $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_apis/wit/workitems/"+ $wk.id + "?" + '$expand=all&api-version=7.1-preview.3'
         $WorkItem = Invoke-RestMethod -Uri $WorItemUrl -Method Get -Headers $authorization
 
-        # get child work item
-        foreach ($currentItem in $WorkItem.relations) 
+        # get activity detail
+        if($WorkItem.fields.'System.WorkItemType' -eq "Activity")
         {
-            if( $currentItem.rel -eq "System.LinkTypes.Hierarchy-Forward")
+            $EngagementName = $WorkItem.fields.'System.Title'.replace('|','')
+            $title = $WorkItem.fields.'System.Title'.replace('|','')
+            $activityId = $WorkItem.id
+
+            if( [String]::IsNullOrEmpty($WorkItem.fields.'System.Title') )
             {
-                $childUrl = $currentItem.url
-                $child = Invoke-RestMethod -Uri $childUrl -Method Get -Headers $authorization
-
-                if($child.fields.'System.WorkItemType' -eq "Activity")
-                {
-                    $EngagementName = $WorkItem.fields.'System.Title'.replace('|','')
-                    $engagementId = $WorkItem.id
-                    $title = $child.fields.'System.Title'.replace('|','')
-                    $activityId = $child.id
-
-                    if( [String]::IsNullOrEmpty($child.fields.'System.Title') )
-                    {
-                        $desc = " "
-                    }
-                    else {
-                        $desc = $child.fields.'System.Title'.replace('|','')
-                    }
-
-                    if($desc -contains "|") 
-                    {
-                        $desc = $desc.replace("|"," ")
-                    }
-                    
-                    $state = $child.fields.'System.State'       
-                    $ActivityType = $child.fields.'Custom.activity_type'
-
-                    # get crew assigned`
-                    $ActivityCrew = $child.fields.'Custom.activity_crewassigned1'
-                    $ActivityCrewStart = $child.fields.'Custom.CrewStartDate'
-                    $ActivityCrewEnd = $child.fields.'Custom.CrewEndDate'
-                    $ActivityCrewType = $child.fields.'Custom.activity_crew_type'
-
-                    # get resources 1
-                    $ActivityRR1Type = $child.fields.'Custom.activity_rr1_type'
-                    $activityRR1Name = $child.fields.'Custom.AssignedResource1'.displayName
-                    $activityRR1Start = $child.fields.'Custom.RRStartDate1'
-                    $activityRR1End = $child.fields.'Custom.RREndDate1'
-
-                    # get resources 2
-                    $ActivityRR2Type = $child.fields.'Custom.activity_rr2_type'
-                    $activityRR2Name = $child.fields.'Custom.AssignedResource2'.displayName
-                    $activityRR2Start = $child.fields.'Custom.RRStartDate2'
-                    $activityRR2End = $child.fields.'Custom.RREndDate2'
-
-                    # get resources 3
-                    $ActivityRR3Type = $child.fields.'Custom.activity_rr3_type'
-                    $activityRR3Name = $child.fields.'Custom.AssignedResource3'.displayName
-                    $activityRR3Start = $child.fields.'Custom.RRStartDate3'
-                    $activityRR3End = $child.fields.'Custom.RREndDate3'
-
-                    # get resources 4
-                    $ActivityRR4Type = $child.fields.'Custom.activity_rr4_type'
-                    $activityRR4Name = $child.fields.'Custom.AssignedResource4'.displayName
-                    $activityRR4Start = $child.fields.'Custom.RRStartDate4'
-                    $activityRR4End = $child.fields.'Custom.RREndDate4'
-
-                    # get resources 5
-                    $ActivityRR5Type = $child.fields.'Custom.activity_rr5_type'
-                    $activityRR5Name = $child.fields.'Custom.AssignedResource5'.displayName
-                    $activityRR5Start = $child.fields.'Custom.RRStartDate5'
-                    $activityRR5End = $child.fields.'Custom.RREndDate5'
-
-                    # get resources 6
-                    $ActivityRR6Type = $child.fields.'Custom.activity_rr6_type'
-                    $activityRR6Name = $child.fields.'Custom.AssignedResource6'.displayName
-                    $activityRR6Start = $child.fields.'Custom.RRStartDate6'
-                    $activityRR6End = $child.fields.'Custom.RREndDate6'
-
-                    # get resources 7
-                    $ActivityRR7Type = $child.fields.'Custom.activity_rr7_type'
-                    $activityRR7Name = $child.fields.'Custom.AssignedResource7'.displayName
-                    $activityRR7Start = $child.fields.'Custom.RRStartDate7'
-                    $activityRR7End = $child.fields.'Custom.RREndDate7'
-
-                    # get resources 8
-                    $ActivityRR8Type = $child.fields.'Custom.activity_rr8_type'
-                    $activityRR8Name = $child.fields.'Custom.AssignedResource8'.displayName
-                    $activityRR8Start = $child.fields.'Custom.RRStartDate8'
-                    $activityRR8End = $child.fields.'Custom.RREndDate8'
-
-                    # get resources 9
-                    $ActivityRR9Type = $child.fields.'Custom.activity_rr9_type'
-                    $activityRR9Name = $child.fields.'Custom.AssignedResource9'.displayName
-                    $activityRR9Start = $child.fields.'Custom.RRStartDate9'
-                    $activityRR9End = $child.fields.'Custom.RREndDate9'
-
-                    #Add data to output file
-                       if ( [string]::IsNullOrEmpty($WorkItem.fields.'Custom.LedByTeam'))
-                        {
-                            $ledByTeam =" "
-                        }
-                        else {
-                            $ledByTeam = $WorkItem.fields.'Custom.LedByTeam'
-                        }
-
-                        $adoLink = "=HYPERLINK(" + $([char]34) + $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_workitems/edit/" + $wk.Id + $([char]34) + "," + $wk.Id + ") " 
-
-                        Write-Host  "Engagement = " $title                      
-                        write-Host  "LedBy = " $ledByTeam
-                        write-Host  "Desc  = " $desc
-
-                        $stg = New-Object -TypeName PSObject -Property @{
-                            Id = $wk.Id
-                            ADOLink = $adoLink
-                        
-                            EngName = $EngagementName.replace('|','')
-                            EngId = $engagementID
-                            EngTitle = $title.replace('|','')
-                            
-                            LedByTeam = $ledByTeam
-                            BPM = $WorkItem.fields.'Custom.PMOPM'.displayName
-                            Act_ID = $activityId
-                                                     
-                            Act_desc = $desc
-
-                            Act_State = $state
-                            Act_Type = $ActivityType
-
-                            # get crew assigned`
-                            Act_Crew1 = $ActivityCrew
-                            Act_Crew1Start = $ActivityCrewStart
-                            Act_Crew1End = $ActivityCrewEnd
-                            Act_Crew1Type = $ActivityCrewType 
-
-                            # get resources 1
-                            Act_RR1_Type = $ActivityRR1Type 
-                            Act_RR1_name = $activityRR1Name 
-                            Act_RR1_Start = $activityRR1Start 
-                            Act_RR1_End = $activityRR1End 
-
-                            # get resources 2
-                            Act_RR2_Type = $ActivityRR2Type 
-                            Act_RR2_Name = $activityRR2Name
-                            Act_RR2_Start = $activityRR2Start
-                            Act_RR2_End = $activityRR2End 
-
-                            
-                            # get resources 3
-                            Act_RR3_Type = $ActivityRR3Type 
-                            Act_RR3_Name = $activityRR3Name
-                            Act_RR3_Start = $activityRR3Start
-                            Act_RR3_End = $activityRR3End 
-                            
-                            # get resources 4
-                            Act_RR4_Type = $ActivityRR4Type 
-                            Act_RR4_Name = $activityRR4Name
-                            Act_RR4_Start = $activityRR4Start
-                            Act_RR4_End = $activityRR4End 
-                            
-                            # get resources 5
-                            Act_RR5_Type = $ActivityRR5Type 
-                            Act_RR5_Name = $activityRR5Name
-                            Act_RR5_Start = $activityRR5Start
-                            Act_RR5_End = $activityRR5End 
-                            
-                            # get resources 6
-                            Act_RR6_Type = $ActivityRR6Type 
-                            Act_RR6_Name = $activityRR6Name
-                            Act_RR6_Start = $activityRR6Start
-                            Act_RR6_End = $activityRR6End 
-
-                            # get resources 7
-                            Act_RR7_Type = $ActivityRR7Type 
-                            Act_RR7_Name = $activityRR7Name
-                            Act_RR7_Start = $activityRR7Start
-                            Act_RR7_End = $activityRR7End 
-
-                            # get resources 8
-                            Act_RR8_Type = $ActivityRR8Type 
-                            Act_RR8_Name = $activityRR8Name
-                            Act_RR8_Start = $activityRR8Start
-                            Act_RR8_End = $activityRR8End 
-
-                            # get resources 9
-                            Act_RR9_Type = $ActivityRR9Type 
-                            Act_RR9_Name = $activityRR9Name
-                            Act_RR9_Start = $activityRR9Start
-                            Act_RR9_End = $activityRR9End                             
-
-                        }
-
-                        $AllWorkItems += $stg   
-                        $stg = $null   
-
-
-                }
+                $desc = " "
             }
+            else 
+            {
+                $desc = $WorkItem.fields.'System.Title'.replace('|','')
+            }
+
+            if($desc -contains "|") 
+            {
+                $desc = $desc.replace("|"," ")
+            }
+            
+            $state = $WorkItem.fields.'System.State'       
+            $ActivityType = $WorkItem.fields.'Custom.activity_type'
+
+            # get crew assigned`
+            $ActivityCrew = $WorkItem.fields.'Custom.activity_crewassigned1'
+            $ActivityCrewStart = $WorkItem.fields.'Custom.CrewStartDate'
+            $ActivityCrewEnd = $WorkItem.fields.'Custom.CrewEndDate'
+            $ActivityCrewType = $WorkItem.fields.'Custom.activity_crew_type'
+
+            # get resources 1
+            $ActivityRR1Type = $WorkItem.fields.'Custom.activity_rr1_type'
+            $activityRR1Name = $WorkItem.fields.'Custom.AssignedResource1'.displayName
+            $activityRR1Start = $WorkItem.fields.'Custom.RRStartDate1'
+            $activityRR1End = $WorkItem.fields.'Custom.RREndDate1'
+
+            # get resources 2
+            $ActivityRR2Type = $WorkItem.fields.'Custom.activity_rr2_type'
+            $activityRR2Name = $WorkItem.fields.'Custom.AssignedResource2'.displayName
+            $activityRR2Start = $WorkItem.fields.'Custom.RRStartDate2'
+            $activityRR2End = $WorkItem.fields.'Custom.RREndDate2'
+
+            # get resources 3
+            $ActivityRR3Type = $WorkItem.fields.'Custom.activity_rr3_type'
+            $activityRR3Name = $WorkItem.fields.'Custom.AssignedResource3'.displayName
+            $activityRR3Start = $WorkItem.fields.'Custom.RRStartDate3'
+            $activityRR3End = $WorkItem.fields.'Custom.RREndDate3'
+
+            # get resources 4
+            $ActivityRR4Type = $WorkItem.fields.'Custom.activity_rr4_type'
+            $activityRR4Name = $WorkItem.fields.'Custom.AssignedResource4'.displayName
+            $activityRR4Start = $WorkItem.fields.'Custom.RRStartDate4'
+            $activityRR4End = $WorkItem.fields.'Custom.RREndDate4'
+
+            # get resources 5
+            $ActivityRR5Type = $WorkItem.fields.'Custom.activity_rr5_type'
+            $activityRR5Name = $WorkItem.fields.'Custom.AssignedResource5'.displayName
+            $activityRR5Start = $WorkItem.fields.'Custom.RRStartDate5'
+            $activityRR5End = $WorkItem.fields.'Custom.RREndDate5'
+
+            # get resources 6
+            $ActivityRR6Type = $WorkItem.fields.'Custom.activity_rr6_type'
+            $activityRR6Name = $WorkItem.fields.'Custom.AssignedResource6'.displayName
+            $activityRR6Start = $WorkItem.fields.'Custom.RRStartDate6'
+            $activityRR6End = $WorkItem.fields.'Custom.RREndDate6'
+
+            # get resources 7
+            $ActivityRR7Type = $WorkItem.fields.'Custom.activity_rr7_type'
+            $activityRR7Name = $WorkItem.fields.'Custom.AssignedResource7'.displayName
+            $activityRR7Start = $WorkItem.fields.'Custom.RRStartDate7'
+            $activityRR7End = $WorkItem.fields.'Custom.RREndDate7'
+
+            # get resources 8
+            $ActivityRR8Type = $WorkItem.fields.'Custom.activity_rr8_type'
+            $activityRR8Name = $WorkItem.fields.'Custom.AssignedResource8'.displayName
+            $activityRR8Start = $WorkItem.fields.'Custom.RRStartDate8'
+            $activityRR8End = $WorkItem.fields.'Custom.RREndDate8'
+
+            # get resources 9
+            $ActivityRR9Type = $WorkItem.fields.'Custom.activity_rr9_type'
+            $activityRR9Name = $WorkItem.fields.'Custom.AssignedResource9'.displayName
+            $activityRR9Start = $WorkItem.fields.'Custom.RRStartDate9'
+            $activityRR9End = $WorkItem.fields.'Custom.RREndDate9'
+
+            #Add data to output file
+            if ( [string]::IsNullOrEmpty($WorkItem.fields.'Custom.LedByTeam'))
+            {
+                $ledByTeam =" "
+            }
+            else 
+            {
+                $ledByTeam = $WorkItem.fields.'Custom.LedByTeam'
+            }
+
+            $adoLink = "=HYPERLINK(" + $([char]34) + $userParams.HTTP_preFix + "://dev.azure.com/" + $userParams.VSTSMasterAcct +  "/" + $userParams.ProjectName + "/_workitems/edit/" + $WorkItem.id + $([char]34) + "," + $WorkItem.id + ") " 
+
+            Write-Host  "Engagement = " $title                      
+            write-Host  "LedBy = " $ledByTeam
+            write-Host  "Desc  = " $desc
+
         }
+
+        $stg = New-Object -TypeName PSObject -Property @{
+            Id = $wk.Id
+            ADOLink = $adoLink
         
-    }
+            EngName = $EngagementName.replace('|','')            
+            EngTitle = $title.replace('|','')
+            
+            LedByTeam = $ledByTeam
+            BPM = $WorkItem.fields.'Custom.PMOPM'.displayName
+            Act_ID = $wk.Id
+                                        
+            Act_desc = $desc
 
+            Act_State = $state
+            Act_Type = $ActivityType
 
+            # get crew assigned`
+            Act_Crew1 = $ActivityCrew
+            Act_Crew1Start = $ActivityCrewStart
+            Act_Crew1End = $ActivityCrewEnd
+            Act_Crew1Type = $ActivityCrewType 
+
+            # get resources 1
+            Act_RR1_Type = $ActivityRR1Type 
+            Act_RR1_name = $activityRR1Name 
+            Act_RR1_Start = $activityRR1Start 
+            Act_RR1_End = $activityRR1End 
+
+            # get resources 2
+            Act_RR2_Type = $ActivityRR2Type 
+            Act_RR2_Name = $activityRR2Name
+            Act_RR2_Start = $activityRR2Start
+            Act_RR2_End = $activityRR2End 
+
+            # get resources 3
+            Act_RR3_Type = $ActivityRR3Type 
+            Act_RR3_Name = $activityRR3Name
+            Act_RR3_Start = $activityRR3Start
+            Act_RR3_End = $activityRR3End 
+            
+            # get resources 4
+            Act_RR4_Type = $ActivityRR4Type 
+            Act_RR4_Name = $activityRR4Name
+            Act_RR4_Start = $activityRR4Start
+            Act_RR4_End = $activityRR4End 
+            
+            # get resources 5
+            Act_RR5_Type = $ActivityRR5Type 
+            Act_RR5_Name = $activityRR5Name
+            Act_RR5_Start = $activityRR5Start
+            Act_RR5_End = $activityRR5End 
+            
+            # get resources 6
+            Act_RR6_Type = $ActivityRR6Type 
+            Act_RR6_Name = $activityRR6Name
+            Act_RR6_Start = $activityRR6Start
+            Act_RR6_End = $activityRR6End 
+
+            # get resources 7
+            Act_RR7_Type = $ActivityRR7Type 
+            Act_RR7_Name = $activityRR7Name
+            Act_RR7_Start = $activityRR7Start
+            Act_RR7_End = $activityRR7End 
+
+            # get resources 8
+            Act_RR8_Type = $ActivityRR8Type 
+            Act_RR8_Name = $activityRR8Name
+            Act_RR8_Start = $activityRR8Start
+            Act_RR8_End = $activityRR8End 
+
+            # get resources 9
+            Act_RR9_Type = $ActivityRR9Type 
+            Act_RR9_Name = $activityRR9Name
+            Act_RR9_Start = $activityRR9Start
+            Act_RR9_End = $activityRR9End                             
+            
+        } # end of if work item is activity
+
+        $AllWorkItems += $stg   
+        $stg = $null   
+                
+    } # end of foreach work item
+
+        
     Write-Host " ==========================   Done ======================== "
 
-    Write-Output "ID|ADOLink|EngName|Eng_Title|ActivityId|Act_desc|Act_type|Act_State|Act_Crew1|Act_Crew1Start|Act_Crew1End|Act_Crew1Type|Act_RR1_Role|Act_RR1_name|Act_RR1_Start|Act_RR1_End|Act_RR2_Role|Act_RR2_Name|Act_RR2_Start|Act_RR2_End |Act_RR3_Role|Act_RR3_Name|Act_RR3_Start|Act_RR3_End|Act_RR4_Role|Act_RR4_Name|Act_RR4_Start|Act_RR4_End|Act_RR5_Role|Act_RR5_Name|Act_RR5_Start|Act_RR5_End|Act_RR6_Role|Act_RR6_Name|Act_RR6_Start|Act_RR6_End|Act_RR7_Role|Act_RR7_Name|Act_RR7_Start|Act_RR7_End|Act_RR8_Role|Act_RR8_Name|Act_RR8_Start|Act_RR8_End|Act_RR9_Role|Act_RR9_Name|Act_RR9_Start|Act_RR9_End|LedByTeam|BPM" | Out-File -FilePath $outFile -Append
+    Write-Output "ID|ADOLink|ActivityId|Act_desc|Act_type|Act_State|Act_Crew1|Act_Crew1Start|Act_Crew1End|Act_Crew1Type|Act_RR1_Role|Act_RR1_name|Act_RR1_Start|Act_RR1_End|Act_RR2_Role|Act_RR2_Name|Act_RR2_Start|Act_RR2_End |Act_RR3_Role|Act_RR3_Name|Act_RR3_Start|Act_RR3_End|Act_RR4_Role|Act_RR4_Name|Act_RR4_Start|Act_RR4_End|Act_RR5_Role|Act_RR5_Name|Act_RR5_Start|Act_RR5_End|Act_RR6_Role|Act_RR6_Name|Act_RR6_Start|Act_RR6_End|Act_RR7_Role|Act_RR7_Name|Act_RR7_Start|Act_RR7_End|Act_RR8_Role|Act_RR8_Name|Act_RR8_Start|Act_RR8_End|Act_RR9_Role|Act_RR9_Name|Act_RR9_Start|Act_RR9_End|LedByTeam|BPM" | Out-File -FilePath $outFile 
     #Write-Output $today.Date "||||||||||" | Out-File -FilePath $outFile -Append
     
     foreach ($Item in $AllWorkItems) 
     {
-        Write-Output $item.EngId "|" | Out-File -FilePath $outFile -Append  -NoNewline
+        Write-Output $item.Id "|" | Out-File -FilePath $outFile -Append  -NoNewline
         Write-Output $item.ADOLink "|" | Out-File -FilePath $outFile -Append  -NoNewline
         
-        Write-Output $item.EngName "|" | Out-File -FilePath $outFile -Append  -NoNewline
-        Write-Output $item.EngTitle "|" | Out-File -FilePath $outFile -Append  -NoNewline  
-
         Write-Output $item.Act_ID "|" | Out-File -FilePath $outFile -Append  -NoNewline
         Write-Output $item.Act_desc "|" | Out-File -FilePath $outFile -Append  -NoNewline
         Write-Output $item.Act_Type "|" | Out-File -FilePath $outFile -Append  -NoNewline   
@@ -1604,18 +1590,15 @@ Function Get-WorkItemActivityByQuery()
         Write-Output $item.Act_RR9_End "|" | Out-File -FilePath $outFile -Append  -NoNewline
 
         Write-Output $item.LedByTeam "|" | Out-File -FilePath $outFile -Append  -NoNewline
-
         Write-Output $item.BPM "|" | Out-File -FilePath $outFile -Append  -NoNewline
+
         Write-Output "" | Out-File -FilePath $outFile -Append       
         
     }
-    
 
     Write-Host " ========================== write complete ======================== "
 
-
 }
-
 
 function Get-WorkItemParentsByQyery()
 {
@@ -1769,9 +1752,7 @@ function Get-WorkItemParentsByQyery()
         
     }
     
-
     Write-Host " ========================== write complete ======================== "
-
 
 }
 

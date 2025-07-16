@@ -65,7 +65,7 @@ switch ($action)
     "GetActivityUsage" 
     {
         # get release notes for each build in the list
-        $userParameters.CurrentWitemQry = "ISE FY25 BPM All Studios"
+        $userParameters.CurrentWitemQry = "ISE FY25 EMEA GTM Studio 3 - All by Activity,Talent, Resource assigned"
         Get-WorkItemActivityByQuery -userParams $userParameters -outfile "C:\TempData\BPM_CapacityFY26.txt"  -PhraseOne "copilot" -PhraseTwo "github" 
     }
     "GetReleaseNotesToWiki" {
